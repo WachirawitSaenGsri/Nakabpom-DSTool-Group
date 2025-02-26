@@ -1,0 +1,71 @@
+<!-- manage_product.html -->
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% tailwind_css %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการสินค้า</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+<div class="flex justify-between items-center bg-gray-800 text-white p-4">
+    <div class="flex items-center">
+        <span class="ml-4 text-lg font-semibold">ระบบการจัดการร้านค้า</span>
+        <a href="{% url 'home' %}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition ml-6">Home</a>
+    </div>
+    <h1 class="text-3xl font-bold text-center mb-6">Welcome, {{ request.user.first_name }} {{ request.user.last_name }}!</h1>
+    <div class="flex items-center">
+        <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">ออกจากระบบ</a>
+    </div>
+</div>
+    <!-- Container -->
+    <div class="max-w-7xl mx-auto p-6">
+        
+        <!-- Title Section -->
+        <h1 class="text-4xl font-bold text-center text-gray-900 mb-8">จัดการสินค้าทั้งหมด</h1>
+
+        <!-- Button Section -->
+        <div class="flex mb-6">
+            <div>
+                <a href="{% url 'add_product' %}" class="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-blue-700 transition mr-6">เพิ่มสินค้า</a>
+            </div>
+            <div>
+                <a href="{% url 'manage_category' %}" class="bg-green-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-green-700 transition">จัดการหมวดหมู่</a>
+            </div>
+        </div>
+
+        <!-- Product List Section -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for product in products %}
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="mb-4">
+                        {% if product.img_product %}
+                            <img src="{{ product.img_product.url }}" alt="{{ product.name }}" class="w-full h-48 object-cover rounded-lg mb-4">
+                        {% else %}
+                            <div class="w-full h-48 bg-gray-300 flex items-center justify-center rounded-lg mb-4">
+                                <span class="text-white text-lg">No Image</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <h4 class="text-xl font-semibold text-gray-800 mb-2">{{ product.name }}</h4>
+                    <p class="text-gray-500 mb-4">{{ product.price }} บาท</p>
+                    <div class="flex justify-between">
+                        <a href="{% url 'edit_product' product.pk %}" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition">แก้ไข</a>
+                        <a href="{% url 'delete_product' product.pk %}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">ลบ</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+</body>
+</html>

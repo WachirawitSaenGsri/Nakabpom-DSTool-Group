@@ -1,0 +1,18 @@
+<!-- sidebar_customer.html -->
+<div class="flex h-screen bg-gray-100">
+    <!-- Sidebar -->
+    <div class="w-64 bg-blue-600 text-white p-6">
+        <h2 class="text-2xl font-semibold mb-6">เมนู</h2>
+        <ul>
+            <li>
+                <a href="{% url 'product_list' %}" class="block py-2 px-4 rounded-md hover:bg-blue-700">ดูสินค้าทั้งหมด</a>
+            </li>
+            <li>
+                <a href="{% url 'cart' %}" class="block py-2 px-4 mt-4 rounded-md hover:bg-blue-700">ดูตะกร้าสินค้า</a>
+            </li>
+            <li>
+                <a href="{% url 'order_history' %}" class="block py-2 px-4 mt-4 rounded-md hover:bg-blue-700">ดูประวัติการสั่งซื้อ</a>
+            </li>
+        </ul>
+</div>
+

@@ -1,0 +1,44 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% tailwind_css %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานยอดขาย</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex justify-between items-center bg-gray-800 text-white p-4">
+        <div class="flex items-center">
+            <span class="ml-4 text-lg font-semibold">ระบบการจัดการร้านค้า</span>
+            <a href="{% url 'home' %}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition ml-6">Home</a>
+        </div>
+        <h1 class="text-3xl font-bold text-center mb-6">Welcome, {{ request.user.first_name }} {{ request.user.last_name }}!</h1>
+        <div class="flex items-center">
+            <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">ออกจากระบบ</a>
+        </div>
+    </div>
+    {% include 'sidebar_owner.html' %}
+    <div class="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold mb-4 text-center">ยอดขายรวมในช่วง 30 วันที่ผ่านมา</h2>
+        
+        <!-- Display the first plot (Sales Report Over Time) -->
+        <div class="flex justify-center mb-6">
+            <img src="data:image/png;base64,{{ plot_image }}" alt="Sales Report">
+        </div>
+
+        <!-- Display the second plot (Top-Selling Products) -->
+        <h3 class="text-xl font-semibold mb-4 text-center">เมนูที่ขายดีที่สุดในช่วง 30 วันที่ผ่านมา</h3>
+        <div class="flex justify-center mb-6">
+            <img src="data:image/png;base64,{{ top_products_image }}" alt="Top Selling Products">
+        </div>
+    </div>
+</body>
+</html>

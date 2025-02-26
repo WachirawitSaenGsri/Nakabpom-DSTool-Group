@@ -1,0 +1,76 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% tailwind_css %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ประวัติการสั่งซื้อ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Navbar -->
+    <div class="flex justify-between items-center bg-gray-800 text-white p-4">
+        <div class="flex items-center">
+            <span class="ml-4 text-lg font-semibold">ระบบการจัดการร้านค้า</span>
+            <a href="{% url 'home' %}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition ml-6">Home</a>
+        </div>
+        <h1 class="text-3xl font-bold text-center mb-6">Welcome, {{ request.user.first_name }} {{ request.user.last_name }}!</h1>
+        <div class="flex items-center">
+            <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">ออกจากระบบ</a>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    {% include 'sidebar_customer.html' %}
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto p-6">
+        <h2 class="text-3xl font-semibold mb-8 text-center">ประวัติการสั่งซื้อ</h2>
+
+        <!-- Check if there are orders -->
+        {% if orders %}
+            <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {% for order in orders %}
+                    <li class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-xl font-semibold text-gray-800">คำสั่งซื้อที่ #{{ order.id }}</h4>
+                            <span class="text-sm text-gray-500">{{ order.date_ordered }}</span>
+                        </div>
+                        
+                        <p class="text-gray-600 mb-2">สถานะ: 
+                            <span class="font-semibold {% if order.status == 'completed' %}text-green-600{% elif order.status == 'pending' %}text-yellow-500{% else %}text-red-500{% endif %}">{{ order.status }}</span>
+                        </p>
+
+                        <div class="mt-4">
+                            <h5 class="text-lg font-semibold mb-2">รายละเอียดคำสั่งซื้อ:</h5>
+                            <ul>
+                                {% for order_detail in order.order_details.all %}
+                                    <li class="flex justify-between items-center p-2 bg-gray-50 rounded-lg mb-2">
+                                        <span class="text-gray-700">{{ order_detail.product.name }} ({{ order_detail.quantity }})</span>
+                                        <span class="text-gray-600">{{ order_detail.product.price|floatformat:2 }} บาท</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        <div class="mt-4 flex justify-between items-center">
+                            <p class="font-semibold text-gray-800">รวมทั้งหมด: <span class="text-xl text-gray-900">{{ order.total_price|floatformat:2 }} บาท</span></p>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-gray-600 text-center">คุณยังไม่มีคำสั่งซื้อ</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>

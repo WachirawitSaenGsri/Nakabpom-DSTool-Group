@@ -1,0 +1,67 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% tailwind_css %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตะกร้า</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+<div class="flex justify-between items-center bg-gray-800 text-white p-4">
+    <div class="flex items-center">
+        <span class="ml-4 text-lg font-semibold">ระบบการจัดการร้านค้า</span>
+        <a href="{% url 'home' %}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition ml-6">Home</a>
+    </div>
+    <h1 class="text-3xl font-bold text-center mb-6">Welcome, {{ request.user.first_name }} {{ request.user.last_name }}!</h1>
+    <div class="flex items-center">
+        <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">ออกจากระบบ</a>
+    </div>
+</div>
+    <div class="max-w-4xl mx-auto p-6">
+        <h1 class="text-3xl font-bold text-center mb-6">ตะกร้าสินค้าของคุณ</h1>
+
+        {% if order_details %}
+            <form method="POST" action="{% url 'cart' %}">
+                {% csrf_token %}
+                <ul>
+                    {% for order_detail in order_details %}
+                        <li class="flex justify-between items-center p-4 bg-white rounded-lg shadow-md mb-4">
+                            <div>
+                                <h4 class="text-xl font-semibold">{{ order_detail.product.name }}</h4>
+                                <p>{{ order_detail.product.price }} บาท</p>
+                            </div>
+                            <div class="flex items-center">
+                                <!-- Quantity input -->
+                                <input type="number" name="quantity_{{ order_detail.id }}" value="{{ order_detail.quantity }}" min="1" class="px-4 py-2 border rounded-md w-20 mr-4">
+                                <!-- Remove button -->
+                                <a href="{% url 'remove_from_cart' order_detail.id %}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">ลบ</a>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+
+                <div class="text-right mt-4">
+                    <button type="submit" class="bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition">อัพเดตตะกร้า</button>
+                </div>
+            </form>
+
+            <div class="mt-4">
+                <h3 class="text-2xl font-semibold">รวมทั้งหมด: {{ total_price }} บาท</h3>
+                <div class="text-right mt-4">
+                    <a href="{% url 'checkout' %}" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition">ชำระเงิน</a>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-center">ไม่มีสินค้าที่จะเพิ่มในตะกร้า</p>
+        {% endif %}
+    </div>
+</body>
+</html>

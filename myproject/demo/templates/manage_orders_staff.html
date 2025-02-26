@@ -1,0 +1,102 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% tailwind_css %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการคำสั่งซื้อ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+        table {
+            width: 100%;  /* Make the table fill the available width */
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navbar -->
+    <div class="flex justify-between items-center bg-gray-800 text-white p-4">
+        <div class="flex items-center">
+            <span class="ml-4 text-lg font-semibold">ระบบการจัดการร้านค้า</span>
+            <a href="{% url 'home' %}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition ml-6">Home</a>
+        </div>
+        <h1 class="text-3xl font-bold text-center mb-6">จัดการคำสั่งซื้อ</h1>
+        <div class="flex items-center">
+            <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">ออกจากระบบ</a>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    {% include 'sidebar_staff.html' %}
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto p-6">
+        <h2 class="text-3xl font-semibold mb-6 text-center">จัดการคำสั่งซื้อ</h2>
+
+        <!-- Display orders in a table -->
+        <table class="w-full bg-white shadow-md rounded-md overflow-hidden">
+            <thead class="bg-gray-800 text-white">
+                <tr>
+                    <th class="p-4 text-left">คำสั่งซื้อที่ #</th>
+                    <th class="p-4 text-left">ลูกค้า</th>
+                    <th class="p-4 text-left">สถานะ</th>
+                    <th class="p-4 text-left">วันที่สั่ง</th>
+                    <th class="text-left">รายละเอียดสินค้า</th>
+                    <th class="p-4 text-left">อัปเดตสถานะ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in page_obj.object_list %}
+                    <tr class="border-t">
+                        <td class="p-4">{{ order.id }}</td>
+                        <td class="p-4">{{ order.customer.get_full_name }}</td>
+                        <td class="p-4">{{ order.status }}</td>
+                        <td class="p-4">{{ order.date_ordered }}</td>
+                        <td>
+                            <!-- Show product details for each order -->
+                            <ul class="list-disc pl-5">
+                                {% for order_detail in order.order_details.all %}
+                                    <li>
+                                        <span>{{ order_detail.product.name }} ({{ order_detail.quantity }}) - </span>
+                                        <span>{{ order_detail.product.price }} บาท</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td class="p-4">
+                            <form method="POST" class="flex space-x-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="order_id" value="{{ order.id }}">
+                                <select name="status" class="border border-gray-300 p-2 rounded-md">
+                                    <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>รอดำเนินการ</option>
+                                    <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>สำเร็จ</option>
+                                    <option value="canceled" {% if order.status == 'canceled' %}selected{% endif %}>ยกเลิก</option>
+                                </select>
+                                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">อัปเดต</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination controls -->
+        <div class="mt-4 flex justify-center items-center">
+            <div>
+                {% if page_obj.has_previous %}
+                    <a href="?page=1" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">หน้าแรก</a>
+                    <a href="?page={{ page_obj.previous_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">หน้าก่อนหน้า</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">หน้าถัดไป</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">หน้าสุดท้าย</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
