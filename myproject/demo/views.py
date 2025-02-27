@@ -17,47 +17,42 @@ from django.utils import timezone
 from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-
+from django.db.models import F
 # Create your views here.
 
 @login_required
 def generate_sales_report(request):
-    # Fetch orders and their associated payments within the last 30 days
+    total_sales1 = OrderDetail.objects.filter(order__status='completed').annotate(total_price=F('quantity') * F('product__price')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+    total_orders = Order.objects.filter(status='completed').count()
     sales_data = Payment.objects.filter(date_paid__gte=(timezone.now() - timedelta(days=30))) \
         .values('date_paid') \
         .annotate(total_sales=Sum('paid_amount')) \
         .order_by('date_paid')
 
-    # Extract the dates and total sales for plotting
     dates = [sale['date_paid'].date() for sale in sales_data]
     total_sales = [sale['total_sales'] for sale in sales_data]
 
-    # Plotting the sales report for the last 30 days
     plt.figure(figsize=(6, 3))
-    plt.plot(dates, total_sales, marker='o', linestyle='-', color='b')
+    plt.plot(dates, total_sales, linestyle='-', color='b')
     plt.title("Sales Report (Last 30 Days)")
     plt.xlabel("Date")
     plt.ylabel("Total Sales (THB)")
     plt.xticks(rotation=45)
     plt.tight_layout()
 
-    # Save the plot to an in-memory buffer for the first graph
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
     plt.close()
 
-    # Encode the image to base64
     image_base64 = base64.b64encode(buf.read()).decode('utf-8')
     buf.close()
 
-    # Fetch the top-selling products based on quantity sold
     product_sales_data = OrderDetail.objects.filter(order__status='completed', order__date_ordered__gte=timezone.now() - timedelta(days=30)) \
         .values('product__name') \
         .annotate(total_quantity_sold=Sum('quantity')) \
         .order_by('-total_quantity_sold')[:10]  # Get the top 10 products
 
-    # Extract product names and sales data
     product_names = [entry['product__name'] for entry in product_sales_data]
     quantities_sold = [entry['total_quantity_sold'] for entry in product_sales_data]
 
@@ -70,20 +65,19 @@ def generate_sales_report(request):
     plt.xticks(rotation=45)
     plt.tight_layout()
 
-    # Save the second plot to an in-memory buffer
     buf2 = io.BytesIO()
     plt.savefig(buf2, format='png')
     buf2.seek(0)
     plt.close()
 
-    # Encode the second image to base64
     top_products_image_base64 = base64.b64encode(buf2.read()).decode('utf-8')
     buf2.close()
 
-    # Render the sales report template with both images
     return render(request, 'sales_report.html', {
-        'plot_image': image_base64,  # First graph (sales over time)
-        'top_products_image': top_products_image_base64  # Second graph (top-selling products)
+        'plot_image': image_base64,
+        'top_products_image': top_products_image_base64,
+        'total_sales': total_sales1,
+        'total_orders': total_orders,
     })
 
 # ฟังก์ชันสำหรับ Register
@@ -131,31 +125,44 @@ def logout_view(request):
 
 @login_required
 def home_view(request):
-    # Get the current logged-in user's profile
     user_profile = request.user.member_profile
 
-    # Display content based on user role
+    # แสดงเนื้อหาตามบทบาทของผู้ใช้
     if user_profile.role == 'customer':
         return render(request, 'home_customer.html', {
             'role': 'customer',
-            'products': Product.objects.all().order_by('-id')[:5],  # Last 5 products
+            'products': Product.objects.all().order_by('-id')[:6],
         })
     elif user_profile.role == 'staff':
         return render(request, 'home_staff.html', {
             'role': 'staff',
-            'products': Product.objects.all().order_by('-id')[:5],  # Last 5 products
+            'products': Product.objects.all().order_by('-id')[:6],
         })
     elif user_profile.role == 'owner':
         return render(request, 'home_owner.html', {
             'role': 'owner',
-            'products': Product.objects.all().order_by('-id')[:5],  # Last 5 products
+            'products': Product.objects.all().order_by('-id')[:6],
         })
 
-    return redirect('login')  # If no role is found, redirect to login
+    return redirect('login')  # หากไม่พบบทบาท ให้เปลี่ยนเส้นทางไปยังการ login
 
+@login_required
 def product_list_view(request):
-    products = Product.objects.all()
-    return render(request, 'product_list.html', {'products': products})
+    # รับค่าหมวดหมู่ที่ถูกเลือกจาก URL query parameter
+    category_id = request.GET.get('category', None)
+
+    # ถ้ามีการเลือกหมวดหมู่
+    if category_id:
+        # กรองสินค้าจากหมวดหมู่ที่เลือก
+        products = Product.objects.filter(category_id=category_id)
+    else:
+        # ถ้าไม่เลือกหมวดหมู่ให้แสดงสินค้าทั้งหมด
+        products = Product.objects.all()
+
+    categories = Category.objects.all()  # ดึงข้อมูลหมวดหมู่ทั้งหมด
+
+    return render(request, 'product_list.html', {'products': products, 'categories': categories})
+
 
 
 # views.py
@@ -163,24 +170,20 @@ def product_list_view(request):
 def add_to_cart(request, product_id):
     product = Product.objects.get(id=product_id)
 
-    # Check if the user has an order with a 'pending' status
     order = Order.objects.filter(customer=request.user, status='Preparation').first()
 
-    # If no 'pending' order exists, create a new one
     if not order:
         order = Order.objects.create(customer=request.user, status='Preparation')
 
-    # Add product to order details
     order_detail, created = OrderDetail.objects.get_or_create(order=order, product=product)
 
     if created:
-        order_detail.quantity = 1  # Initialize quantity to 1 if a new OrderDetail was created
+        order_detail.quantity = 1
     else:
-        order_detail.quantity += 1  # Increase quantity if the product is already in the cart
+        order_detail.quantity += 1
 
     order_detail.save()
 
-    # Decrease stock for the product
     if product.stock > 0:
         product.stock -= 1
         product.save()
@@ -190,7 +193,6 @@ def add_to_cart(request, product_id):
 
 @login_required
 def cart_view(request):
-    # Get the current order for the user with 'pending' status
     order = Order.objects.filter(customer=request.user, status='Preparation').first()
 
     if order:
@@ -200,7 +202,6 @@ def cart_view(request):
         order_details = []
         total_price = 0
 
-    # Handle POST request for updating quantities
     if request.method == 'POST':
         for order_detail in order_details:
             quantity_key = f"quantity_{order_detail.id}"
@@ -209,7 +210,6 @@ def cart_view(request):
                 order_detail.quantity = int(quantity)
                 order_detail.save()
 
-        # After updating quantities, recalculate total price
         total_price = order_details.aggregate(total_price=models.Sum(models.F('product__price') * models.F('quantity')))['total_price'] or 0
 
         messages.success(request, 'ตะกร้าสินค้าของคุณได้รับการอัปเดตเรียบร้อยแล้ว!')
@@ -222,7 +222,6 @@ def cart_view(request):
 def remove_from_cart(request, order_detail_id):
     order_detail = get_object_or_404(OrderDetail, id=order_detail_id)
 
-    # Only allow removal if the user owns the order
     if order_detail.order.customer == request.user:
         order_detail.delete()
         messages.success(request, 'สินค้าถูกลบออกจากตะกร้าเรียบร้อยแล้ว!')
@@ -239,19 +238,17 @@ def checkout_view(request):
         messages.error(request, 'ไม่มีคำสั่งซื้อที่ยังไม่ได้ชำระ')
         return redirect('cart')
 
-    # Calculate the total price by multiplying price and quantity
     total_price = order.order_details.aggregate(
         total_price=models.Sum(models.F('product__price') * models.F('quantity'))
     )['total_price'] or 0
 
     if request.method == 'POST':
-        # Handle order payment
         payment_method = request.POST.get('payment_method')
 
         payment = Payment.objects.create(
             order=order,
             method=payment_method,
-            paid_amount=total_price,  # Use the calculated total price
+            paid_amount=total_price,
         )
         order.status = 'pending'
         order.save()
@@ -266,7 +263,6 @@ def checkout_view(request):
 # ฟังก์ชันสำหรับการแสดงสินค้าทั้งหมด
 @login_required
 def manage_product_view(request):
-    # Only allow staff or owners to access this view
     if request.user.member_profile.role not in ['staff', 'owner']:
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
@@ -334,7 +330,6 @@ def delete_product_view(request, pk):
 
 @login_required
 def manage_category_view(request):
-    # Only allow staff or owners to access this view
     if request.user.member_profile.role not in ['staff', 'owner']:
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
@@ -402,29 +397,23 @@ def delete_category_view(request, pk):
 
 @login_required
 def order_history_view(request):
-    # Fetch all orders related to the logged-in user
     orders = Order.objects.filter(customer=request.user).order_by('-date_ordered')
 
-    # Calculate the total price for each order
     for order in orders:
         order.total_price = order.order_details.aggregate(
             total_price=models.Sum(models.F('product__price') * models.F('quantity'))
         )['total_price'] or 0
 
-    # Pass orders to the template
     return render(request, 'order_history.html', {'orders': orders})
 
 @login_required
 def manage_product_stock_view(request):
-    # Only allow staff or owners to access this view
     if request.user.member_profile.role not in ['staff', 'owner']:
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
 
-    # Get all products from the database
     products = Product.objects.all()
 
-    # Handle the update for stock changes
     if request.method == 'POST':
         for product in products:
             stock_key = f"stock_{product.id}"
@@ -440,15 +429,12 @@ def manage_product_stock_view(request):
 
 @login_required
 def manage_product_stock_Staff_view(request):
-    # Only allow staff or owners to access this view
     if request.user.member_profile.role not in ['staff', 'owner']:
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
 
-    # Get all products from the database
     products = Product.objects.all()
 
-    # Handle the update for stock changes
     if request.method == 'POST':
         for product in products:
             stock_key = f"stock_{product.id}"
@@ -465,18 +451,15 @@ def manage_product_stock_Staff_view(request):
 
 @login_required
 def manage_orders_view(request):
-    # Only allow staff or owners to access this view
     if request.user.member_profile.role not in ['staff', 'owner']:
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
 
-    # Get all orders from the database but exclude those with 'completed' status
     orders = Order.objects.exclude(status__in=['completed', 'canceled']).order_by('-date_ordered')
     paginator = Paginator(orders, 10)
-    page_number = request.GET.get('page')  # Get the page number from the URL
+    page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Handle the update for order status changes
     if request.method == 'POST':
         order_id = request.POST.get('order_id')
         new_status = request.POST.get('status')
@@ -492,17 +475,14 @@ def manage_orders_view(request):
     return render(request, 'manage_orders.html', {'page_obj': page_obj})
 @login_required
 def manage_orders_staff_view(request):
-    # Only allow staff or owners to access this view
     if request.user.member_profile.role not in ['staff', 'owner']:
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
 
-    # Get all orders from the database
     orders = Order.objects.exclude(status__in=['completed', 'canceled']).order_by('-date_ordered')
     paginator = Paginator(orders, 10)
-    page_number = request.GET.get('page')  # Get the page number from the URL
+    page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    # Handle the update for order status changes
     if request.method == 'POST':
         order_id = request.POST.get('order_id')
         new_status = request.POST.get('status')
@@ -519,18 +499,16 @@ def manage_orders_staff_view(request):
 
 @login_required
 def manage_employees_view(request):
-    # Only allow owners to access this view
     if request.user.member_profile.role != 'owner':
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
 
-    employees = Member.objects.all()  # Fetch all employees
+    employees = Member.objects.all()
     return render(request, 'manage_employees.html', {'employees': employees})
 
 
 @login_required
 def add_employee_view(request):
-    # Only allow owners to access this view
     if request.user.member_profile.role != 'owner':
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
@@ -538,7 +516,7 @@ def add_employee_view(request):
     if request.method == 'POST':
         form = MemberForm(request.POST)
         if form.is_valid():
-            form.save()  # Save the employee instance
+            form.save()
             messages.success(request, 'พนักงานถูกเพิ่มเรียบร้อยแล้ว!')
             return redirect('manage_employees')
         else:
@@ -551,24 +529,22 @@ def add_employee_view(request):
 
 @login_required
 def edit_employee_view(request, pk):
-    # Only allow owners to access this view
     if request.user.member_profile.role != 'owner':
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')
 
-    # Fetch the employee from the database
     employee = get_object_or_404(Member, pk=pk)
 
     if request.method == 'POST':
-        form = MemberForm(request.POST, instance=employee)  # Important: Use instance to load existing employee data
+        form = MemberForm(request.POST, instance=employee)
         if form.is_valid():
-            form.save()  # Save the updated employee data
+            form.save()
             messages.success(request, 'ข้อมูลพนักงานถูกแก้ไขเรียบร้อยแล้ว!')
             return redirect('manage_employees')
         else:
             messages.error(request, 'โปรดแก้ไขข้อผิดพลาดด้านล่าง')
     else:
-        form = MemberForm(instance=employee)  # Load existing employee data into the form
+        form = MemberForm(instance=employee)
 
     return render(request, 'edit_employee.html', {'form': form, 'employee': employee})
 
@@ -576,7 +552,6 @@ def edit_employee_view(request, pk):
 
 @login_required
 def delete_employee_view(request, pk):
-    # Only allow owners to access this view
     if request.user.member_profile.role != 'owner':
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect('home')

@@ -54,7 +54,15 @@
                     <tr class="border-t">
                         <td class="p-4">{{ order.id }}</td>
                         <td class="p-4">{{ order.customer.get_full_name }}</td>
-                        <td class="p-4">{{ order.status }}</td>
+                        <td class="p-4">
+                            {% if order.status == 'pending' %}
+                                รอดำเนินการ
+                            {% elif order.status == 'completed' %}
+                                สำเร็จ
+                            {% elif order.status == 'canceled' %}
+                                ยกเลิก
+                            {% endif %}
+                        </td>
                         <td class="p-4">{{ order.date_ordered }}</td>
                         <td>
                             <!-- Show product details for each order -->

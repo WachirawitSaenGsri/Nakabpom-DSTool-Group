@@ -28,7 +28,16 @@
 </div>
     <div class="max-w-4xl mx-auto p-6">
         <h1 class="text-3xl font-bold text-center mb-6">รายการสินค้า</h1>
-
+    <form method="get" class="mb-6">
+        <label for="category" class="text-lg font-medium mr-4 text">กรองสินค้าจากหมวดหมู่:</label>
+        <select name="category" id="category" class="px-4 py-2 border rounded-md">
+            <option value="">เลือกหมวดหมู่</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="ml-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">กรอง</button>
+    </form>
         <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for product in products %}
                 <li class="bg-white p-4 rounded-lg shadow-md">

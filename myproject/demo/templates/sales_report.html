@@ -27,14 +27,16 @@
     </div>
     {% include 'sidebar_owner.html' %}
     <div class="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-md">
+        <div class="text-center mb-6">
+            <p class="text-xl">ยอดขายรวม: {{ total_sales }} บาท</p>
+            <p class="text-xl">ออเดอร์รวม: {{ total_orders }} ออเดอร์</p>
+        </div>
         <h2 class="text-2xl font-semibold mb-4 text-center">ยอดขายรวมในช่วง 30 วันที่ผ่านมา</h2>
         
-        <!-- Display the first plot (Sales Report Over Time) -->
         <div class="flex justify-center mb-6">
             <img src="data:image/png;base64,{{ plot_image }}" alt="Sales Report">
         </div>
-
-        <!-- Display the second plot (Top-Selling Products) -->
+        
         <h3 class="text-xl font-semibold mb-4 text-center">เมนูที่ขายดีที่สุดในช่วง 30 วันที่ผ่านมา</h3>
         <div class="flex justify-center mb-6">
             <img src="data:image/png;base64,{{ top_products_image }}" alt="Top Selling Products">
