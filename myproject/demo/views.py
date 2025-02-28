@@ -89,6 +89,11 @@ def register_view(request):
             user.first_name = request.POST.get('first_name')
             user.last_name = request.POST.get('last_name')
             user.save()
+
+            # สร้างข้อมูลในตาราง Member
+            role = request.POST.get('role', 'customer')  # ตั้งค่า role เริ่มต้นเป็น 'customer'
+            Member.objects.create(user=user, role=role)
+
             messages.success(request, 'บัญชีของคุณถูกสร้างขึ้นเรียบร้อยแล้ว!')
             return redirect('login')
         else:
